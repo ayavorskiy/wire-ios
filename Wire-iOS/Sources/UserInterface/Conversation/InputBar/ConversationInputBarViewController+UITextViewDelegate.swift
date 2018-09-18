@@ -49,15 +49,25 @@ extension ConversationInputBarViewController: UITextViewDelegate {
             sendOrEditText(candidateText, mentions: inputBar.textView.mentions)
             return false
         }
-        
+
         // TODO: Integrate with suggestions pop-up
         // Start mentioning
-        if text == "@" {
-            let user: UserType = conversation.connectedUser ?? conversation.sortedOtherParticipants.randomElement() ?? ZMUser.selfUser()
-            let attachment = MentionTextAttachment(user: user)
-            let attributedString = NSAttributedString(attachment: attachment)
-            textView.attributedText = textView.attributedText + attributedString
-            return false
+        if text.isOne(of: " ", "\n"), let current = textView.text {
+            let lastWord = current.components(separatedBy: .whitespacesAndNewlines).last ?? ""
+         
+            if lastWord.starts(with: "@") && lastWord.count > 1 {
+                let handle = String(lastWord.dropFirst())
+                let user = conversation.sortedOtherParticipants.first { $0.handle == handle }
+                
+                if let user = user {
+                    let attachment = MentionTextAttachment(user: user)
+                    let attributedString = NSAttributedString(attachment: attachment)
+                    let mutable = NSMutableAttributedString(attributedString: textView.attributedText)
+                    mutable.replaceCharacters(in: (mutable.string as NSString).range(of: lastWord), with: attributedString)
+                    textView.attributedText = mutable
+                    return false
+                }
+            }
         }
 
         inputBar.textView.respondToChange(text, inRange: range)
